@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import axios from 'axios';
+import LZString from 'lz-string';
 import steamApps from './assets/steam_apps.json';
 
 /** Steam Web API constants */
@@ -189,6 +190,8 @@ function App() {
   const [sectionSearch, setSectionSearch] = useState('');
   const [fontSize, setFontSize] = useState(() => localStorage.getItem('spa_fontsize') || 'sm');
   const [recentGames, setRecentGames] = useState(() => { try { return JSON.parse(localStorage.getItem('spa_recent_games') || '[]'); } catch { return []; } });
+  const [mobileTab, setMobileTab] = useState('buff');
+  const [shareCopied, setShareCopied] = useState(false);
 
   const gameSearchRef = useRef(null);
   const followUpChatRef = useRef(null);
@@ -240,6 +243,35 @@ function App() {
       }
     } catch {}
   }, []);
+
+  useEffect(() => {
+    try {
+      const hash = window.location.hash;
+      if (!hash.startsWith('#share=')) return;
+      const compressed = hash.slice(7);
+      const json = LZString.decompressFromEncodedURIComponent(compressed);
+      if (!json) return;
+      const { analysis: a, title, bg, images, date } = JSON.parse(json);
+      if (a) {
+        setAnalysis(a);
+        setCurrentPatchTitle(title || '');
+        setBgImage(bg || null);
+        setPatchImages(images || []);
+        setPatchDate(date || null);
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    } catch {}
+  }, []);
+
+  const handleShare = () => {
+    if (!analysis) return;
+    try {
+      const payload = JSON.stringify({ analysis, title: currentPatchTitle, bg: bgImage, images: patchImages, date: patchDate });
+      const compressed = LZString.compressToEncodedURIComponent(payload);
+      const url = `${window.location.origin}${window.location.pathname}#share=${compressed}`;
+      navigator.clipboard?.writeText(url).then(() => { setShareCopied(true); setTimeout(() => setShareCopied(false), 2000); });
+    } catch {}
+  };
 
   const suggestions = useMemo(() => {
     if (searchTerm.length < 3) return [];
@@ -467,6 +499,7 @@ function App() {
             <button onClick={() => handleAnalyze()} disabled={loading} className={`flex-1 md:flex-none md:px-8 rounded py-3 font-bold text-white transition-all ${loading ? 'bg-gray-700' : 'bg-[#238636] hover:bg-[#2ea043]'}`}>{loading ? 'ANALYZING...' : 'RUN ANALYSIS'}</button>
             <button onClick={handleOpenPatchSelect} disabled={loading} className={`flex-1 md:flex-none md:px-5 rounded border border-[#30363d] py-3 font-bold transition-all ${loading ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-[#21262d] text-white hover:bg-[#2d333b]'}`}>SELECT PATCH</button>
             {analysis && !loading && <button onClick={() => setFollowUpOpen(true)} className="flex-1 md:flex-none md:px-4 rounded border border-[#30363d] bg-[#21262d] py-3 font-bold hover:bg-[#2d333b]">FOLLOW UP</button>}
+            {analysis && !loading && <button onClick={handleShare} className="flex-1 md:flex-none md:px-4 rounded border border-[#30363d] bg-[#21262d] py-3 font-bold hover:bg-[#2d333b] transition-colors">{shareCopied ? '✓ COPIED' : 'SHARE'}</button>}
           </div>
         </div>
 
@@ -530,9 +563,43 @@ function App() {
           </div>
         )}
 
+        {/* Mobile Tab Switcher */}
+        {(analysis || loading) && (
+          <div className="flex md:hidden mb-3 rounded-lg border border-[#30363d] bg-[#161b22] overflow-hidden">
+            {ANALYSIS_COLUMNS.map(({ key, title, color }) => (
+              <button
+                key={key}
+                onClick={() => setMobileTab(key)}
+                className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors border-b-2 ${mobileTab === key ? `${color} text-white bg-[#1f242d]` : 'border-transparent text-gray-500 hover:text-white'}`}
+              >
+                {title.replace(/^\S+\s/, '')}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Main Analysis Grid */}
         <div className="relative">
-          <div className={`flex gap-6 transition-all ${expandedColumn ? 'opacity-30 blur-sm' : ''}`}>
+          {/* Mobile: single column view */}
+          <div className="md:hidden">
+            {(analysis || loading) && (() => {
+              const col = ANALYSIS_COLUMNS.find(c => c.key === mobileTab);
+              return col ? (
+                <Section
+                  key={col.key}
+                  title={col.title}
+                  color={col.color}
+                  content={analysis?.[col.key]}
+                  loading={loading}
+                  showExpandButton={false}
+                  fontSize={fontSize}
+                  searchTerm={sectionSearch}
+                />
+              ) : null;
+            })()}
+          </div>
+          {/* Desktop: full flex layout */}
+          <div className={`hidden md:flex gap-6 transition-all ${expandedColumn ? 'opacity-30 blur-sm' : ''}`}>
             {ANALYSIS_COLUMNS.map(({ key, title, color }) => (
               <Section
                 key={key}
@@ -669,7 +736,7 @@ function App() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-sm font-bold text-[#adbac7] tracking-tight">PATCH_ANALYZER v0.6</span>
+              <span className="text-sm font-bold text-[#adbac7] tracking-tight">PATCH_ANALYZER v0.8</span>
             </div>
             <p className="text-xs leading-relaxed max-w-sm">
               Built with ❤️ for the gaming community. This tool provides automated meta-analysis using advanced LLMs to help competitive players stay ahead. I wanted to make this project for my own need but since I lowkey f with it, decided to share.

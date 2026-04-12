@@ -4,6 +4,17 @@ All notable changes to Steam Patch Analyzer Web are documented here.
 
 ---
 
+## [v0.8] - 2026-04-12
+
+### Added
+- **Share button** — compresses the current analysis (sections, title, background, patch images, date) into an lz-string URL hash and copies it to the clipboard; visiting the URL auto-restores the analysis without needing an API key or re-fetch
+- **Mobile tab layout** — on small screens the four analysis columns are replaced with a tab switcher (Buffs / Nerfs / Other / Misc) showing one section at a time; the full four-column flex layout is preserved on `md` and wider
+
+### Changed
+- Footer version label updated to `PATCH_ANALYZER v0.8`
+
+---
+
 ## [v0.7.1] - 2026-04-12
 
 ### Fixed
