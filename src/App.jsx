@@ -83,10 +83,10 @@ const Section = ({ title, color, content, loading, showExpandButton, onExpand, o
   const [copied, setCopied] = useState(false);
 
   const HOVER_COLORS = {
-    'border-green-500': 'group-hover/header:bg-green-500/10',
-    'border-red-500': 'group-hover/header:bg-red-500/10',
-    'border-yellow-500': 'group-hover/header:bg-yellow-500/10',
-    'border-gray-500': 'group-hover/header:bg-gray-500/10',
+    'border-[#5a7d61]': 'group-hover/header:bg-[#5a7d61]/10',
+    'border-[#7a2846]': 'group-hover/header:bg-[#7a2846]/10',
+    'border-yellow-600': 'group-hover/header:bg-yellow-600/10',
+    'border-gray-600': 'group-hover/header:bg-gray-600/10',
   };
 
   const FONT_CLASS = { sm: 'text-sm', base: 'text-base', lg: 'text-lg' };
@@ -159,10 +159,10 @@ const Section = ({ title, color, content, loading, showExpandButton, onExpand, o
 };
 
 const ANALYSIS_COLUMNS = [
-  { key: 'buff', title: '🟢 BUFFS', color: 'border-green-500' },
-  { key: 'nerf', title: '🔴 NERFS', color: 'border-red-500' },
-  { key: 'other', title: '🟡 OTHER', color: 'border-yellow-500' },
-  { key: 'misc', title: '⚪ MISC', color: 'border-gray-500' },
+  { key: 'buff', title: '🟢 BUFFS', color: 'border-[#5a7d61]' },
+  { key: 'nerf', title: '🔴 NERFS', color: 'border-[#7a2846]' },
+  { key: 'other', title: '🟡 OTHER', color: 'border-yellow-600' },
+  { key: 'misc', title: '⚪ MISC', color: 'border-gray-600' },
 ];
 
 function App() {
@@ -217,7 +217,9 @@ function App() {
     5. Every individual change must start with the '▪️' symbol.
     6. Do NOT use semicolons (;) to separate multiple changes for the same character. Use a new '▪️' symbol for each.
     7. Do NOT leave empty lines between the header and the first bullet point.
-    8. Format output as raw HTML suitable for dangerouslySetInnerHTML.`;
+    8. Format output as raw HTML suitable for dangerouslySetInnerHTML.
+    9. You may use small contextual symbols within bullet text to improve scannability (e.g. ⬆ for increases, ⬇ for decreases, ⏱ for cooldown/timing, 🛡 for defense, ⚔ for damage/offense) — use at most one per bullet and only where it genuinely aids clarity. Do not force icons on every line.
+    10. When a bullet describes a numeric change (damage, cooldown, percentage, range, cost, etc.) and the previous value is available in the patch notes, show both values for comparison using an arrow format: e.g. 80 → 95. If the old value is not mentioned in the source, state only the new value.`;
 
   const addToRecentGames = (game) => {
     const updated = [game, ...recentGames.filter(g => g.i !== game.i)].slice(0, 5);
@@ -380,6 +382,7 @@ function App() {
     setSectionSearch('');
     setFollowUpOpen(false);
     setFollowUpMessages([]);
+    setCollapsedColumns(new Set());
 
     try {
       let patchItem = specificPatchItem;
@@ -446,6 +449,10 @@ function App() {
         misc: extractSection(aiResponse, tags[3], [])
       };
       setAnalysis(analysisResult);
+      const EMPTY = "<i>No changes found.</i>";
+      setCollapsedColumns(new Set(
+        ['buff', 'nerf', 'other', 'misc'].filter(k => analysisResult[k] === EMPTY)
+      ));
       try {
         sessionStorage.setItem('spa_last_analysis', JSON.stringify({
           analysis: analysisResult,
