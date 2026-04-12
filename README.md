@@ -25,7 +25,7 @@ For the Python version, see [Steam Patch Analyzer](https://github.com/VittorioCo
 
 ## 🕹️ Live Demo
 
-This project is hosted with Github Pages for live usage without any installation. [See here](https://vittoriocodes.github.io/Steam-Patch-Analyzer-Web).
+This project is hosted with Github Pages for live usage without any installation. [See here](https://vittoriocodes.github.io/steam-patch-analyzer-web).
 
 ## 🚀 Getting Started
 
@@ -37,8 +37,8 @@ This project is hosted with Github Pages for live usage without any installation
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/vittoriocodes/Steam-Patch-Analyzer-Web.git
-    cd Steam-Patch-Analyzer-Web
+    git clone https://github.com/vittoriocodes/steam-patch-analyzer-web.git
+    cd steam-patch-analyzer-web
     ```
 
 2.  **Install dependencies:**
