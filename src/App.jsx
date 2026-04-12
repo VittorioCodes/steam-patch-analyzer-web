@@ -137,6 +137,9 @@ function App() {
   const [patchSelectOpen, setPatchSelectOpen] = useState(false);
   const [availablePatches, setAvailablePatches] = useState([]);
   const [patchSelectLoading, setPatchSelectLoading] = useState(false);
+  const [bgImage, setBgImage] = useState(null);
+  const [patchImages, setPatchImages] = useState([]);
+  const [lightboxImage, setLightboxImage] = useState(null);
 
   const gameSearchRef = useRef(null);
   const followUpChatRef = useRef(null);
@@ -194,6 +197,16 @@ function App() {
     return content.replace(/\n/g, '<br>') || "<i>No changes found.</i>";
   };
 
+  const extractAllImages = (html) => {
+    if (!html) return [];
+    const urls = [];
+    const pattern = /\[img[^\]]*src="([^"]+)"/gi;
+    let m;
+    while ((m = pattern.exec(html)) !== null)
+      urls.push(m[1].trim().replace('{STEAM_CLAN_IMAGE}', 'https://clan.akamai.steamstatic.com/images'));
+    return [...new Set(urls)];
+  };
+
   /** Core Logic: Steam Fetch & AI Analysis */
   const handleOpenPatchSelect = async () => {
     if (!selectedApp) return alert("Please select a game first.");
@@ -220,6 +233,8 @@ function App() {
     if (!apiKey || !selectedApp) return alert("Missing API Key or Game Selection.");
     setLoading(true);
     setAnalysis(null);
+    setBgImage(null);
+    setPatchImages([]);
     setFollowUpOpen(false);
     setFollowUpMessages([]);
 
@@ -237,6 +252,8 @@ function App() {
 
       if (!patchItem) throw new Error("No valid patch notes found.");
 
+      setBgImage(`https://cdn.akamai.steamstatic.com/steam/apps/${selectedApp.i}/header.jpg`);
+      setPatchImages(extractAllImages(patchItem.contents));
       setCurrentPatchTitle(patchItem.title); // Set the title here without waiting for the AI
 
       const ai = new GoogleGenAI({ apiKey });
@@ -311,7 +328,20 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-[#adbac7] p-4 md:p-8">
+    <div className="min-h-screen text-[#adbac7] p-4 md:p-8">
+      {/* Fixed background layers */}
+      <div className="fixed inset-0 z-0 bg-[#0d1117]" />
+      <div
+        className={`fixed inset-0 z-[1] pointer-events-none transition-opacity duration-700 ${bgImage ? 'opacity-100' : 'opacity-0'}`}
+        style={{
+          backgroundImage: bgImage ? `url("${bgImage}")` : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: 'brightness(0.13) saturate(0.7)',
+        }}
+      />
+      {/* Content */}
+      <div className="relative z-[2]">
       <div className="max-w-[1600px] mx-auto">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row gap-4 mb-8 bg-[#161b22] p-6 rounded-lg border border-[#30363d] shadow-xl items-end">
@@ -460,6 +490,39 @@ function App() {
             </div>
           </div>
         )}
+        {/* Patch Images Strip */}
+        {patchImages.length > 0 && !loading && (
+          <div className="mt-6 rounded-xl border border-[#30363d] bg-[#161b22] overflow-hidden shadow-lg">
+            <div className="border-b border-[#30363d] bg-[#1f242d] px-4 py-3">
+              <span className="text-xs font-bold uppercase tracking-widest text-white">Images in patch notes</span>
+              <span className="ml-3 text-[10px] text-gray-500 font-mono">{patchImages.length} found</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto p-4 custom-scrollbar">
+              {patchImages.map((url, i) => (
+                <img
+                  key={i}
+                  src={url}
+                  alt={`Patch image ${i + 1}`}
+                  onClick={() => setLightboxImage(url)}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  className="h-28 w-auto flex-shrink-0 cursor-pointer rounded-lg border border-[#30363d] object-cover transition-all duration-200 hover:border-blue-500 hover:scale-105"
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Lightbox */}
+        {lightboxImage && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setLightboxImage(null)}>
+            <div className="fixed inset-0 bg-black/85" />
+            <img
+              src={lightboxImage}
+              alt="Patch note image"
+              className="relative max-w-full max-h-[90vh] rounded-xl shadow-2xl object-contain"
+            />
+          </div>
+        )}
       </div>
       {/* Footer Section */}
       <footer className="mt-12 py-8 border-t border-[#30363d] text-[#7d8590]">
@@ -512,6 +575,7 @@ function App() {
           <span className="opacity-50">Data retrieved via secure proxy layer</span>
         </div>
       </footer>
+      </div>
     </div>
   );
 }
