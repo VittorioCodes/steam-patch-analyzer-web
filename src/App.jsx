@@ -57,6 +57,12 @@ function pickPatchNewsItem(newsitems) {
   );
 }
 
+function getAllPatchNewsItems(newsitems) {
+  const items = newsitems ?? [];
+  const notPress = (item) => !isLikelyThirdPartySteamNews(item);
+  return items.filter((item) => notPress(item) && steamNewsTitleLooksLikePatchNotes(item.title));
+}
+
 /** SVG Icons */
 const ExpandIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-6 w-6 shrink-0 text-white"><path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
@@ -128,6 +134,9 @@ function App() {
   const [followUpMessages, setFollowUpMessages] = useState([]);
   const [followUpInput, setFollowUpInput] = useState('');
   const [followUpSending, setFollowUpSending] = useState(false);
+  const [patchSelectOpen, setPatchSelectOpen] = useState(false);
+  const [availablePatches, setAvailablePatches] = useState([]);
+  const [patchSelectLoading, setPatchSelectLoading] = useState(false);
 
   const gameSearchRef = useRef(null);
   const followUpChatRef = useRef(null);
@@ -186,7 +195,28 @@ function App() {
   };
 
   /** Core Logic: Steam Fetch & AI Analysis */
-  const handleAnalyze = async () => {
+  const handleOpenPatchSelect = async () => {
+    if (!selectedApp) return alert("Please select a game first.");
+    setPatchSelectLoading(true);
+    setPatchSelectOpen(true);
+    setAvailablePatches([]);
+
+    try {
+      const steamApiUrl = `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${selectedApp.i}&count=30`;
+      const workerUrl = `https://steam-proxy.knkelbucik-yeniden.workers.dev/?target=${encodeURIComponent(steamApiUrl)}`;
+      const steamRes = await axios.get(workerUrl);
+      const data = typeof steamRes.data === 'string' ? JSON.parse(steamRes.data) : steamRes.data;
+      const patches = getAllPatchNewsItems(data.appnews?.newsitems);
+      setAvailablePatches(patches);
+    } catch (err) {
+      alert("Error fetching patches: " + err.message);
+      setPatchSelectOpen(false);
+    } finally {
+      setPatchSelectLoading(false);
+    }
+  };
+
+  const handleAnalyze = async (specificPatchItem = null) => {
     if (!apiKey || !selectedApp) return alert("Missing API Key or Game Selection.");
     setLoading(true);
     setAnalysis(null);
@@ -194,13 +224,16 @@ function App() {
     setFollowUpMessages([]);
 
     try {
-      setDebug({ model: 'System', status: 'Fetching Steam Data...' });
-      const steamApiUrl = `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${selectedApp.i}&count=30`;
-      const workerUrl = `https://steam-proxy.knkelbucik-yeniden.workers.dev/?target=${encodeURIComponent(steamApiUrl)}`;
-      
-      const steamRes = await axios.get(workerUrl);
-      const data = typeof steamRes.data === 'string' ? JSON.parse(steamRes.data) : steamRes.data;
-      const patchItem = pickPatchNewsItem(data.appnews?.newsitems);
+      let patchItem = specificPatchItem;
+
+      if (!patchItem) {
+        setDebug({ model: 'System', status: 'Fetching Steam Data...' });
+        const steamApiUrl = `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${selectedApp.i}&count=30`;
+        const workerUrl = `https://steam-proxy.knkelbucik-yeniden.workers.dev/?target=${encodeURIComponent(steamApiUrl)}`;
+        const steamRes = await axios.get(workerUrl);
+        const data = typeof steamRes.data === 'string' ? JSON.parse(steamRes.data) : steamRes.data;
+        patchItem = pickPatchNewsItem(data.appnews?.newsitems);
+      }
 
       if (!patchItem) throw new Error("No valid patch notes found.");
 
@@ -307,6 +340,7 @@ function App() {
           </div>
           <div className="flex w-full gap-2 md:w-auto">
             <button onClick={handleAnalyze} disabled={loading} className={`flex-1 md:flex-none md:px-8 rounded py-3 font-bold text-white transition-all ${loading ? 'bg-gray-700' : 'bg-[#238636] hover:bg-[#2ea043]'}`}>{loading ? 'ANALYZING...' : 'RUN ANALYSIS'}</button>
+            <button onClick={handleOpenPatchSelect} disabled={loading} className={`flex-1 md:flex-none md:px-5 rounded border border-[#30363d] py-3 font-bold transition-all ${loading ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-[#21262d] text-white hover:bg-[#2d333b]'}`}>SELECT PATCH</button>
             {analysis && !loading && <button onClick={() => setFollowUpOpen(true)} className="flex-1 md:flex-none md:px-4 rounded border border-[#30363d] bg-[#21262d] py-3 font-bold hover:bg-[#2d333b]">FOLLOW UP</button>}
           </div>
         </div>
@@ -370,6 +404,36 @@ function App() {
             </div>
           )}
         </div>
+
+        {/* Patch Select Modal */}
+        {patchSelectOpen && (
+          <div className="fixed inset-0 z-[95] flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/70" onClick={() => setPatchSelectOpen(false)}></div>
+            <div className="relative flex flex-col w-full max-w-[520px] max-h-[80vh] bg-[#161b22] rounded-xl border border-[#30363d] shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between border-b border-[#30363d] bg-[#1c2128] px-4 py-3">
+                <h2 className="text-sm font-bold uppercase text-white">Select Patch</h2>
+                <button onClick={() => setPatchSelectOpen(false)} className="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
+              </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {patchSelectLoading ? (
+                  <div className="p-8 text-center text-gray-400 text-sm animate-pulse">Loading patches...</div>
+                ) : availablePatches.length === 0 ? (
+                  <div className="p-8 text-center text-gray-400 text-sm">No patches found for this game.</div>
+                ) : (
+                  availablePatches.map((patch) => (
+                    <div
+                      key={patch.gid}
+                      onClick={() => { setPatchSelectOpen(false); handleAnalyze(patch); }}
+                      className="cursor-pointer border-b border-[#30363d] px-4 py-3 hover:bg-[#2d333b] transition-colors"
+                    >
+                      <span className="text-sm text-[#adbac7]">{patch.title}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Follow-up Chat UI */}
         {followUpOpen && (
