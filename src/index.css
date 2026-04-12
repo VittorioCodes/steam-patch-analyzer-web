@@ -1,0 +1,80 @@
+/* Core Tailwind Directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global Reset & Background */
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #0d1117; /* GitHub Dark Dimmed background */
+  color: #adbac7;
+  margin: 0;
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar for the 4 Columns - Exactly like your Python project */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #161b22;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #444c56;
+}
+
+/* Styling for the AI-generated HTML content */
+b {
+  color: #f0f6fc;
+  display: block;
+  margin-top: 1.2rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.95rem;
+  border-left: 3px solid #30363d;
+  padding-left: 8px;
+}
+
+/* Specific highlight for bullet points */
+i {
+  color: #768390;
+  font-style: italic;
+}
+
+/* Ensure the grid takes full height correctly */
+#root {
+  min-height: 100vh;
+}
+
+@keyframes section-expand-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.section-expand-in {
+  animation: section-expand-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slideIn {
+  animation: slideIn 0.5s ease-out forwards;
+}
