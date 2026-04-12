@@ -232,7 +232,7 @@ function App() {
         const workerUrl = `https://steam-proxy.knkelbucik-yeniden.workers.dev/?target=${encodeURIComponent(steamApiUrl)}`;
         const steamRes = await axios.get(workerUrl);
         const data = typeof steamRes.data === 'string' ? JSON.parse(steamRes.data) : steamRes.data;
-        patchItem = pickPatchNewsItem(data.appnews?.newsitems);
+        patchItem = getAllPatchNewsItems(data.appnews?.newsitems)[0] ?? null;
       }
 
       if (!patchItem) throw new Error("No valid patch notes found.");
@@ -339,7 +339,7 @@ function App() {
             )}
           </div>
           <div className="flex w-full gap-2 md:w-auto">
-            <button onClick={handleAnalyze} disabled={loading} className={`flex-1 md:flex-none md:px-8 rounded py-3 font-bold text-white transition-all ${loading ? 'bg-gray-700' : 'bg-[#238636] hover:bg-[#2ea043]'}`}>{loading ? 'ANALYZING...' : 'RUN ANALYSIS'}</button>
+            <button onClick={() => handleAnalyze()} disabled={loading} className={`flex-1 md:flex-none md:px-8 rounded py-3 font-bold text-white transition-all ${loading ? 'bg-gray-700' : 'bg-[#238636] hover:bg-[#2ea043]'}`}>{loading ? 'ANALYZING...' : 'RUN ANALYSIS'}</button>
             <button onClick={handleOpenPatchSelect} disabled={loading} className={`flex-1 md:flex-none md:px-5 rounded border border-[#30363d] py-3 font-bold transition-all ${loading ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-[#21262d] text-white hover:bg-[#2d333b]'}`}>SELECT PATCH</button>
             {analysis && !loading && <button onClick={() => setFollowUpOpen(true)} className="flex-1 md:flex-none md:px-4 rounded border border-[#30363d] bg-[#21262d] py-3 font-bold hover:bg-[#2d333b]">FOLLOW UP</button>}
           </div>
