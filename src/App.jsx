@@ -197,6 +197,8 @@ function App() {
 
   const gameSearchRef = useRef(null);
   const followUpChatRef = useRef(null);
+  const easterEggCountRef = useRef(0);
+  const easterEggTimerRef = useRef(null);
 
   /** AI Models & Prompting */
   const MODELS = [
@@ -487,6 +489,16 @@ function App() {
       setFollowUpMessages((prev) => [...prev, { role: 'model', text: `Error: ${err.message}` }]);
     } finally {
       setFollowUpSending(false);
+    }
+  };
+
+  const handleYearClick = () => {
+    easterEggCountRef.current += 1;
+    clearTimeout(easterEggTimerRef.current);
+    easterEggTimerRef.current = setTimeout(() => { easterEggCountRef.current = 0; }, 2500);
+    if (easterEggCountRef.current >= 5) {
+      easterEggCountRef.current = 0;
+      try { new Audio('https://www.myinstants.com/media/sounds/oiia-oiia.mp3').play(); } catch {}
     }
   };
 
@@ -849,7 +861,7 @@ function App() {
 
         {/* Bottom Divider and Copyright */}
         <div className="mt-8 pt-4 border-t border-[#30363d]/50 flex justify-between items-center text-[9px] uppercase tracking-widest">
-          <span>© {new Date().getFullYear()} - All Rights Reserved</span>
+          <span onClick={handleYearClick} className="select-none cursor-default">© {new Date().getFullYear()} - All Rights Reserved</span>
           <span className="opacity-50">Data retrieved via secure proxy layer</span>
         </div>
       </footer>
