@@ -413,7 +413,7 @@ function App() {
             <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest">
               <span>MIT License</span>
               <a 
-                href="https://github.com/vittoriocodes/steam-patch-analyzer" 
+                href="https://github.com/vittoriocodes/steam-patch-analyzer-web" 
                 target="_blank" 
                 rel="noreferrer" 
                 className="text-blue-500 hover:text-blue-400 transition-colors"
