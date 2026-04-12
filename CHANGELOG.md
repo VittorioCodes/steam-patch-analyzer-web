@@ -17,6 +17,15 @@ All notable changes to Steam Patch Analyzer Web are documented here.
 ### Changed
 - Footer version label updated to `PATCH_ANALYZER v0.8`
 - Header input row uses `items-end` alignment with Recent games as a visually separate section, keeping inputs stable regardless of recent game history
+- Section accent colors changed to muted variants: sage green (`#5a7d61`) for Buffs, cold claret (`#7a2846`) for Nerfs
+- AI prompt updated with two new rules: contextual micro-icons for scannability (⬆ ⬇ ⏱ 🛡 ⚔), and stat comparison format (`80 → 95`) when previous values are available in the source notes
+- Empty sections (AI returned no changes) now auto-collapse after analysis to free up space; collapsed state resets at the start of each new analysis
+
+### Fixed
+- `404.html` added to redirect case-variant URLs (e.g. lowercase `/steam-patch-analyzer-web/`) to the canonical GitHub Pages path, preserving any `#share=` hash
+
+### Easter Egg
+- Clicking the `© 2026` copyright text in the footer 5 times within 2.5 seconds plays the oiia oiia sound effect
 
 ---
 
