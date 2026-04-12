@@ -4,6 +4,14 @@ All notable changes to Steam Patch Analyzer Web are documented here.
 
 ---
 
+## [v0.7.1] - 2026-04-12
+
+### Fixed
+- **Run Analysis** button was passing the browser `MouseEvent` as the `specificPatchItem` argument due to `onClick={handleAnalyze}` — changed to `onClick={() => handleAnalyze()}` so the function is called with no arguments as intended
+- Run Analysis now uses `getAllPatchNewsItems()[0]` (same source as Select Patch) to pick the latest patch, replacing `pickPatchNewsItem` which could return items without a `contents` field and caused a TypeError crash in the AI loop
+
+---
+
 ## [v0.7] - 2026-04-12
 
 ### Added
