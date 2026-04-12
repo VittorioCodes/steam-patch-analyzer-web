@@ -7,11 +7,16 @@ All notable changes to Steam Patch Analyzer Web are documented here.
 ## [v0.8] - 2026-04-12
 
 ### Added
-- **Share button** — compresses the current analysis (sections, title, background, patch images, date) into an lz-string URL hash and copies it to the clipboard; visiting the URL auto-restores the analysis without needing an API key or re-fetch
+- **Share button** — generates a short shareable link (copied to clipboard) that lets anyone view the analysis without an API key; the link contains only an internal code (`#share=w:ID`)
+- Share storage is backed by the app's own Cloudflare Worker KV — no third-party paste service; shared data expires after 30 days
+- Share disclaimer modal with upfront disclosure before generating a link
+- Legacy lz-string hash support retained for any previously shared links (`#share=...`)
 - **Mobile tab layout** — on small screens the four analysis columns are replaced with a tab switcher (Buffs / Nerfs / Other / Misc) showing one section at a time; the full four-column flex layout is preserved on `md` and wider
+- **Recent games** row moved to a separate strip below the input row so it never shifts the API Key / Game Name / button alignment
 
 ### Changed
 - Footer version label updated to `PATCH_ANALYZER v0.8`
+- Header input row uses `items-end` alignment with Recent games as a visually separate section, keeping inputs stable regardless of recent game history
 
 ---
 

@@ -192,6 +192,8 @@ function App() {
   const [recentGames, setRecentGames] = useState(() => { try { return JSON.parse(localStorage.getItem('spa_recent_games') || '[]'); } catch { return []; } });
   const [mobileTab, setMobileTab] = useState('buff');
   const [shareCopied, setShareCopied] = useState(false);
+  const [shareDisclaimerOpen, setShareDisclaimerOpen] = useState(false);
+  const [sharePosting, setSharePosting] = useState(false);
 
   const gameSearchRef = useRef(null);
   const followUpChatRef = useRef(null);
@@ -244,33 +246,71 @@ function App() {
     } catch {}
   }, []);
 
+  const WORKER_URL = 'https://steam-proxy.knkelbucik-yeniden.workers.dev';
+
   useEffect(() => {
-    try {
-      const hash = window.location.hash;
-      if (!hash.startsWith('#share=')) return;
-      const compressed = hash.slice(7);
-      const json = LZString.decompressFromEncodedURIComponent(compressed);
-      if (!json) return;
-      const { analysis: a, title, bg, images, date } = JSON.parse(json);
-      if (a) {
-        setAnalysis(a);
-        setCurrentPatchTitle(title || '');
-        setBgImage(bg || null);
-        setPatchImages(images || []);
-        setPatchDate(date || null);
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      }
-    } catch {}
+    const restoreFromHash = async () => {
+      try {
+        const hash = window.location.hash;
+        if (hash.startsWith('#share=w:')) {
+          const id = hash.slice(9);
+          const res = await fetch(`${WORKER_URL}/?action=load&id=${id}`);
+          if (!res.ok) throw new Error('Share not found or expired');
+          const { analysis: a, title, bg, images, date } = await res.json();
+          if (a) {
+            setAnalysis(a);
+            setCurrentPatchTitle(title || '');
+            setBgImage(bg || null);
+            setPatchImages(images || []);
+            setPatchDate(date || null);
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          }
+        } else if (hash.startsWith('#share=')) {
+          // Legacy lz-string fallback
+          const compressed = hash.slice(7);
+          const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
+          if (!jsonStr) return;
+          const { analysis: a, title, bg, images, date } = JSON.parse(jsonStr);
+          if (a) {
+            setAnalysis(a);
+            setCurrentPatchTitle(title || '');
+            setBgImage(bg || null);
+            setPatchImages(images || []);
+            setPatchDate(date || null);
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          }
+        }
+      } catch {}
+    };
+    restoreFromHash();
   }, []);
 
   const handleShare = () => {
     if (!analysis) return;
+    setShareDisclaimerOpen(true);
+  };
+
+  const handleShareConfirm = async () => {
+    setShareDisclaimerOpen(false);
+    setSharePosting(true);
     try {
       const payload = JSON.stringify({ analysis, title: currentPatchTitle, bg: bgImage, images: patchImages, date: patchDate });
-      const compressed = LZString.compressToEncodedURIComponent(payload);
-      const url = `${window.location.origin}${window.location.pathname}#share=${compressed}`;
-      navigator.clipboard?.writeText(url).then(() => { setShareCopied(true); setTimeout(() => setShareCopied(false), 2000); });
-    } catch {}
+      const res = await fetch(`${WORKER_URL}/?action=store`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      });
+      const data = await res.json();
+      if (!data.id) throw new Error(data.error || 'Share creation failed');
+      const shareUrl = `${window.location.origin}${window.location.pathname}#share=w:${data.id}`;
+      await navigator.clipboard?.writeText(shareUrl);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    } catch (err) {
+      alert('Failed to create share link: ' + err.message);
+    } finally {
+      setSharePosting(false);
+    }
   };
 
   const suggestions = useMemo(() => {
@@ -460,47 +500,51 @@ function App() {
       <div className="relative z-[2]">
       <div className="max-w-[1600px] mx-auto">
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8 bg-[#161b22] p-6 rounded-lg border border-[#30363d] shadow-xl items-end">
-          <div className="flex-1 w-full space-y-2">
-            <div className="flex justify-start items-center gap-2">
-              <label className="text-[10px] font-bold text-gray-500 uppercase">API Key</label>
-              <a 
-                href="https://aistudio.google.com/app/apikey" 
-                target="_blank" 
-                rel="noreferrer" 
-                className="text-[10px] font-bold text-blue-500 hover:underline uppercase"
-              >
-                Get yours here
-              </a>
+        <div className="flex flex-col gap-3 mb-8 bg-[#161b22] p-6 rounded-lg border border-[#30363d] shadow-xl">
+          {/* Inputs + Buttons row */}
+          <div className="flex flex-col md:flex-row gap-4 md:items-end">
+            <div className="flex-1 w-full space-y-2">
+              <div className="flex justify-start items-center gap-2">
+                <label className="text-[10px] font-bold text-gray-500 uppercase">API Key</label>
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[10px] font-bold text-blue-500 hover:underline uppercase"
+                >
+                  Get yours here
+                </a>
+              </div>
+              <input type="password" className="w-full bg-[#0d1117] border border-[#30363d] p-3 rounded focus:border-blue-500 outline-none" value={apiKey} onChange={e => { setApiKey(e.target.value); localStorage.setItem('spa_apikey', e.target.value); }} />
             </div>
-            <input type="password" className="w-full bg-[#0d1117] border border-[#30363d] p-3 rounded focus:border-blue-500 outline-none" value={apiKey} onChange={e => { setApiKey(e.target.value); localStorage.setItem('spa_apikey', e.target.value); }} />
+            <div ref={gameSearchRef} className="relative flex-1 w-full space-y-2">
+              <label className="text-[10px] font-bold text-gray-500 uppercase">Game Name</label>
+              <input type="text" className="w-full bg-[#0d1117] border border-[#30363d] p-3 rounded focus:border-blue-500 outline-none" value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setGameSuggestionsDismissed(false); }} />
+              {suggestions.length > 0 && !gameSuggestionsDismissed && (
+                <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded border border-[#30363d] bg-[#1c2128] shadow-2xl">
+                  {suggestions.map(s => <div key={s.i} onClick={() => { setSelectedApp(s); setSearchTerm(s.n.toUpperCase()); setGameSuggestionsDismissed(true); }} className="cursor-pointer border-b border-[#30363d] p-3 hover:bg-[#2d333b]">{s.n.toUpperCase()}</div>)}
+                </div>
+              )}
+            </div>
+            <div className="flex w-full gap-2 md:w-auto">
+              <button onClick={() => handleAnalyze()} disabled={loading} className={`flex-1 md:flex-none md:px-8 rounded py-3 font-bold text-white transition-all ${loading ? 'bg-gray-700' : 'bg-[#238636] hover:bg-[#2ea043]'}`}>{loading ? 'ANALYZING...' : 'RUN ANALYSIS'}</button>
+              <button onClick={handleOpenPatchSelect} disabled={loading} className={`flex-1 md:flex-none md:px-5 rounded border border-[#30363d] py-3 font-bold transition-all ${loading ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-[#21262d] text-white hover:bg-[#2d333b]'}`}>SELECT PATCH</button>
+              {analysis && !loading && <button onClick={() => setFollowUpOpen(true)} className="flex-1 md:flex-none md:px-4 rounded border border-[#30363d] bg-[#21262d] py-3 font-bold hover:bg-[#2d333b]">FOLLOW UP</button>}
+              {analysis && !loading && <button onClick={handleShare} disabled={sharePosting} className={`flex-1 md:flex-none md:px-4 rounded border border-[#30363d] py-3 font-bold transition-colors ${sharePosting ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : shareCopied ? 'bg-[#238636] text-white border-green-700' : 'bg-[#21262d] text-white hover:bg-[#2d333b]'}`}>{sharePosting ? 'SHARING...' : shareCopied ? '✓ COPIED' : 'SHARE'}</button>}
+            </div>
           </div>
-          <div ref={gameSearchRef} className="relative flex-1 w-full space-y-2">
-            <label className="text-[10px] font-bold text-gray-500 uppercase">Game Name</label>
-            <input type="text" className="w-full bg-[#0d1117] border border-[#30363d] p-3 rounded focus:border-blue-500 outline-none" value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setGameSuggestionsDismissed(false); }} />
-            {recentGames.length > 0 && searchTerm.length < 3 && (
-              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                <span className="text-[9px] font-bold uppercase text-gray-600">Recent:</span>
-                {recentGames.map(g => (
-                  <button key={g.i} onClick={() => { setSelectedApp(g); setSearchTerm(g.n.toUpperCase()); setGameSuggestionsDismissed(true); }}
-                    className="rounded border border-[#30363d] bg-[#21262d] px-2 py-0.5 text-[9px] font-bold uppercase text-gray-400 transition-colors hover:border-blue-500 hover:text-white">
-                    {g.n}
-                  </button>
-                ))}
-              </div>
-            )}
-            {suggestions.length > 0 && !gameSuggestionsDismissed && (
-              <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded border border-[#30363d] bg-[#1c2128] shadow-2xl">
-                {suggestions.map(s => <div key={s.i} onClick={() => { setSelectedApp(s); setSearchTerm(s.n.toUpperCase()); setGameSuggestionsDismissed(true); }} className="cursor-pointer border-b border-[#30363d] p-3 hover:bg-[#2d333b]">{s.n.toUpperCase()}</div>)}
-              </div>
-            )}
-          </div>
-          <div className="flex w-full gap-2 md:w-auto">
-            <button onClick={() => handleAnalyze()} disabled={loading} className={`flex-1 md:flex-none md:px-8 rounded py-3 font-bold text-white transition-all ${loading ? 'bg-gray-700' : 'bg-[#238636] hover:bg-[#2ea043]'}`}>{loading ? 'ANALYZING...' : 'RUN ANALYSIS'}</button>
-            <button onClick={handleOpenPatchSelect} disabled={loading} className={`flex-1 md:flex-none md:px-5 rounded border border-[#30363d] py-3 font-bold transition-all ${loading ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-[#21262d] text-white hover:bg-[#2d333b]'}`}>SELECT PATCH</button>
-            {analysis && !loading && <button onClick={() => setFollowUpOpen(true)} className="flex-1 md:flex-none md:px-4 rounded border border-[#30363d] bg-[#21262d] py-3 font-bold hover:bg-[#2d333b]">FOLLOW UP</button>}
-            {analysis && !loading && <button onClick={handleShare} className="flex-1 md:flex-none md:px-4 rounded border border-[#30363d] bg-[#21262d] py-3 font-bold hover:bg-[#2d333b] transition-colors">{shareCopied ? '✓ COPIED' : 'SHARE'}</button>}
-          </div>
+          {/* Recent games row — separate, doesn't affect input alignment */}
+          {recentGames.length > 0 && searchTerm.length < 3 && (
+            <div className="flex flex-wrap items-center gap-1.5 border-t border-[#30363d] pt-2.5">
+              <span className="text-[9px] font-bold uppercase text-gray-600">Recent:</span>
+              {recentGames.map(g => (
+                <button key={g.i} onClick={() => { setSelectedApp(g); setSearchTerm(g.n.toUpperCase()); setGameSuggestionsDismissed(true); }}
+                  className="rounded border border-[#30363d] bg-[#21262d] px-2 py-0.5 text-[9px] font-bold uppercase text-gray-400 transition-colors hover:border-blue-500 hover:text-white">
+                  {g.n}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Status Bar */}
@@ -712,6 +756,29 @@ function App() {
                   />
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Share Disclaimer Modal */}
+        {shareDisclaimerOpen && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/75" onClick={() => setShareDisclaimerOpen(false)} />
+            <div className="relative w-full max-w-md bg-[#161b22] rounded-xl border border-[#30363d] shadow-2xl flex flex-col gap-4 p-6">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-white">Share Analysis</h2>
+              <p className="text-xs text-[#adbac7] leading-relaxed">
+                A short shareable link will be generated and copied to your clipboard.
+                Anyone with the link can view this analysis instantly — no API key required.
+                The link contains only an internal code; the analysis is stored on this app's own infrastructure.
+              </p>
+              <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/8 p-3 space-y-1.5 text-[11px] text-yellow-200/80 leading-relaxed">
+                <p><span className="font-bold text-yellow-300">⚠ Shared links expire after 30 days.</span></p>
+                <p><span className="font-bold text-yellow-300">⚠ Availability depends on the app's proxy service uptime.</span> Links may not load if the service is temporarily unavailable.</p>
+              </div>
+              <div className="flex gap-2 justify-end pt-1">
+                <button onClick={() => setShareDisclaimerOpen(false)} className="px-4 py-2 rounded border border-[#30363d] bg-[#21262d] text-sm text-gray-400 hover:text-white hover:bg-[#2d333b] transition-colors">Cancel</button>
+                <button onClick={handleShareConfirm} className="px-4 py-2 rounded bg-[#238636] text-sm font-bold text-white hover:bg-[#2ea043] transition-colors">Create & Copy Link</button>
+              </div>
             </div>
           </div>
         )}
