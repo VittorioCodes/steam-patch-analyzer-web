@@ -1,4 +1,4 @@
-# 🛠️ Steam Patch Analyzer Web v0.6
+# 🛠️ Steam Patch Analyzer Web
 
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Gemini AI](https://img.shields.io/badge/Gemini_AI-4285F4?style=for-the-badge&logo=google&logoColor=white)
