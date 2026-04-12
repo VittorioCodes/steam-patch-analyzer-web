@@ -1,9 +1,9 @@
 {
-  "name": "steam-patch-analyzer",
+  "name": "steam-patch-analyzer-web",
   "private": true,
   "version": "0.6.0",
   "type": "module",
-  "homepage": "https://vittoriocodes.github.io/steam-patch-analyzer",
+  "homepage": "https://vittoriocodes.github.io/steam-patch-analyzer-web",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
