@@ -70,11 +70,16 @@ const ExpandIcon = () => (
 const CompressIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-6 w-6 shrink-0 text-white"><path fill="currentColor" d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
 );
+const CopyIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-3.5 w-3.5"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+);
+const ChevronLeftIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-3.5 w-3.5"><path fill="currentColor" d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z"/></svg>
+);
 
 /** UI Components */
-const Section = ({ title, color, content, loading, showExpandButton, onExpand, onCollapse, fillHeight }) => {
-  // Extract the color from the border class and prepare it for the hover background
-  const hoverBgColor = color.replace('border-', 'bg-').replace('500', '500/10');
+const Section = ({ title, color, content, loading, showExpandButton, onExpand, onCollapse, fillHeight, isCollapsed, onToggleCollapse, fontSize, searchTerm }) => {
+  const [copied, setCopied] = useState(false);
 
   const HOVER_COLORS = {
     'border-green-500': 'group-hover/header:bg-green-500/10',
@@ -83,30 +88,69 @@ const Section = ({ title, color, content, loading, showExpandButton, onExpand, o
     'border-gray-500': 'group-hover/header:bg-gray-500/10',
   };
 
+  const FONT_CLASS = { sm: 'text-sm', base: 'text-base', lg: 'text-lg' };
+
+  const handleCopy = (e) => {
+    e.stopPropagation();
+    const text = (content || '').replace(/<[^>]*>/g, '').replace(/▪️/g, '•').trim();
+    navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+  };
+
+  const renderedContent = () => {
+    const base = content || "<i class='opacity-40 italic'>Waiting for analysis...</i>";
+    if (!searchTerm) return base;
+    const esc = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return base.replace(new RegExp(`(${esc})`, 'gi'), '<mark class="bg-yellow-400/25 text-yellow-200 rounded-sm px-0.5">$1</mark>');
+  };
+
+  if (isCollapsed) {
+    return (
+      <div
+        onClick={onToggleCollapse}
+        title={`Expand ${title}`}
+        className={`flex w-12 flex-none cursor-pointer flex-col overflow-hidden rounded-xl border border-[#30363d] bg-[#161b22] shadow-lg transition-all duration-300 ease-in-out hover:border-[#484f58] ${fillHeight ? 'h-full' : 'h-[75vh]'}`}
+      >
+        <div className={`flex min-h-[3.25rem] w-full items-center justify-center border-b-2 bg-[#1f242d] ${color}`} />
+        <div className="flex flex-1 items-center justify-center py-4">
+          <span className="select-none whitespace-nowrap text-[9px] font-bold uppercase tracking-widest text-white/60"
+                style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+            {title}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={`flex flex-col overflow-hidden rounded-xl border border-[#30363d] bg-[#161b22] shadow-lg transition-all duration-300 ${fillHeight ? 'h-full min-h-0' : 'h-[75vh]'}`}>
+    <div className={`flex flex-1 flex-col overflow-hidden rounded-xl border border-[#30363d] bg-[#161b22] shadow-lg transition-all duration-300 ease-in-out ${fillHeight ? 'h-full min-h-0' : 'h-[75vh]'}`}>
       <div className={`group/header relative flex w-full min-h-[3.25rem] items-center overflow-hidden border-b-2 bg-[#1f242d] px-3 py-3 ${color}`}>
-        {/* This is where we pass the hoverBgColor variable */}
         <span className={`pointer-events-none absolute left-1/2 top-1/2 h-full w-full origin-center -translate-x-1/2 -translate-y-1/2 scale-0 opacity-0 transition-all duration-500 group-hover/header:scale-100 group-hover/header:opacity-100 ${HOVER_COLORS[color] || 'group-hover/header:bg-white/10'}`} />
-      
         <div className="relative z-[1] flex w-full min-w-0 items-center">
-          <div className="min-w-[2.25rem] flex-1" />
+          <div className="flex min-w-[2.25rem] flex-1 items-center">
+            <button onClick={(e) => { e.stopPropagation(); onToggleCollapse?.(); }} className="rounded-md p-1.5 text-white/40 transition-colors hover:bg-white/15 hover:text-white" title="Collapse">
+              <ChevronLeftIcon />
+            </button>
+          </div>
           <span className="text-center text-sm font-bold uppercase tracking-widest text-white">{title}</span>
-          <div className="flex min-w-[2.25rem] flex-1 justify-end">
+          <div className="flex min-w-[2.25rem] flex-1 justify-end gap-0.5">
+            {content && !loading && (
+              <button onClick={handleCopy} className="rounded-md p-1.5 text-white/40 transition-colors hover:bg-white/15 hover:text-white" title="Copy section">
+                {copied ? <span className="text-[9px] font-bold leading-none text-green-400">✓</span> : <CopyIcon />}
+              </button>
+            )}
             {showExpandButton && <button onClick={(e) => { e.stopPropagation(); onExpand?.(); }} className="rounded-md p-1.5 text-white hover:bg-white/15"><ExpandIcon /></button>}
             {onCollapse && <button onClick={(e) => { e.stopPropagation(); onCollapse(); }} className="rounded-md p-1.5 text-white hover:bg-white/15"><CompressIcon /></button>}
           </div>
         </div>
       </div>
-      {/* Content section remains the same... */}
-      <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto p-6 text-sm leading-relaxed">
+      <div className={`custom-scrollbar min-h-0 flex-1 overflow-y-auto p-6 leading-relaxed ${FONT_CLASS[fontSize] || 'text-sm'}`}>
         {loading ? (
           <div className="flex flex-col gap-3 animate-pulse">
             <div className="h-4 w-3/4 rounded bg-gray-800"></div>
             <div className="h-4 w-full rounded bg-gray-800"></div>
           </div>
         ) : (
-          <div className="break-words text-[#adbac7]" dangerouslySetInnerHTML={{ __html: content || "<i class='opacity-40 italic'>Waiting for analysis...</i>" }} />
+          <div className="break-words text-[#adbac7]" dangerouslySetInnerHTML={{ __html: renderedContent() }} />
         )}
       </div>
     </div>
@@ -122,7 +166,7 @@ const ANALYSIS_COLUMNS = [
 
 function App() {
   const [currentPatchTitle, setCurrentPatchTitle] = useState('');
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('spa_apikey') || '');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedApp, setSelectedApp] = useState(null);
   const [analysis, setAnalysis] = useState(null);
@@ -130,6 +174,7 @@ function App() {
   const [debug, setDebug] = useState({ model: '', status: 'Idle' });
   const [gameSuggestionsDismissed, setGameSuggestionsDismissed] = useState(false);
   const [expandedColumn, setExpandedColumn] = useState(null);
+  const [collapsedColumns, setCollapsedColumns] = useState(new Set());
   const [followUpOpen, setFollowUpOpen] = useState(false);
   const [followUpMessages, setFollowUpMessages] = useState([]);
   const [followUpInput, setFollowUpInput] = useState('');
@@ -140,6 +185,10 @@ function App() {
   const [bgImage, setBgImage] = useState(null);
   const [patchImages, setPatchImages] = useState([]);
   const [lightboxImage, setLightboxImage] = useState(null);
+  const [patchDate, setPatchDate] = useState(null);
+  const [sectionSearch, setSectionSearch] = useState('');
+  const [fontSize, setFontSize] = useState(() => localStorage.getItem('spa_fontsize') || 'sm');
+  const [recentGames, setRecentGames] = useState(() => { try { return JSON.parse(localStorage.getItem('spa_recent_games') || '[]'); } catch { return []; } });
 
   const gameSearchRef = useRef(null);
   const followUpChatRef = useRef(null);
@@ -165,11 +214,31 @@ function App() {
     7. Do NOT leave empty lines between the header and the first bullet point.
     8. Format output as raw HTML suitable for dangerouslySetInnerHTML.`;
 
+  const addToRecentGames = (game) => {
+    const updated = [game, ...recentGames.filter(g => g.i !== game.i)].slice(0, 5);
+    setRecentGames(updated);
+    localStorage.setItem('spa_recent_games', JSON.stringify(updated));
+  };
+
   /** Event Handlers */
   useEffect(() => {
     const onPointerDown = (e) => { if (!gameSearchRef.current?.contains(e.target)) setGameSuggestionsDismissed(true); };
     document.addEventListener('mousedown', onPointerDown);
     return () => document.removeEventListener('mousedown', onPointerDown);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const cached = sessionStorage.getItem('spa_last_analysis');
+      if (cached) {
+        const { analysis: a, title, bg, images, date } = JSON.parse(cached);
+        setAnalysis(a);
+        setCurrentPatchTitle(title || '');
+        setBgImage(bg || null);
+        setPatchImages(images || []);
+        setPatchDate(date || null);
+      }
+    } catch {}
   }, []);
 
   const suggestions = useMemo(() => {
@@ -235,6 +304,8 @@ function App() {
     setAnalysis(null);
     setBgImage(null);
     setPatchImages([]);
+    setPatchDate(null);
+    setSectionSearch('');
     setFollowUpOpen(false);
     setFollowUpMessages([]);
 
@@ -254,7 +325,10 @@ function App() {
 
       setBgImage(`https://cdn.akamai.steamstatic.com/steam/apps/${selectedApp.i}/header.jpg`);
       setPatchImages(extractAllImages(patchItem.contents));
-      setCurrentPatchTitle(patchItem.title); // Set the title here without waiting for the AI
+      const formattedDate = patchItem.date ? new Date(patchItem.date * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase() : null;
+      setPatchDate(formattedDate);
+      addToRecentGames(selectedApp);
+      setCurrentPatchTitle(patchItem.title);
 
       const ai = new GoogleGenAI({ apiKey });
       let aiResponse = "";
@@ -291,14 +365,24 @@ function App() {
       ]);
 
       const tags = ["[SECTION_BUFF]", "[SECTION_NERF]", "[SECTION_OTHER]", "[SECTION_MISC]"];
-      setAnalysis({
+      const analysisResult = {
         title: patchItem.title,
         model: usedModel,
         buff: extractSection(aiResponse, tags[0], [tags[1], tags[2], tags[3]]),
         nerf: extractSection(aiResponse, tags[1], [tags[2], tags[3]]),
         other: extractSection(aiResponse, tags[2], [tags[3]]),
         misc: extractSection(aiResponse, tags[3], [])
-      });
+      };
+      setAnalysis(analysisResult);
+      try {
+        sessionStorage.setItem('spa_last_analysis', JSON.stringify({
+          analysis: analysisResult,
+          title: patchItem.title,
+          bg: `https://cdn.akamai.steamstatic.com/steam/apps/${selectedApp.i}/header.jpg`,
+          images: extractAllImages(patchItem.contents),
+          date: formattedDate,
+        }));
+      } catch {}
 
     } catch (error) {
       alert("Error: " + error.message);
@@ -357,11 +441,22 @@ function App() {
                 Get yours here
               </a>
             </div>
-            <input type="password" className="w-full bg-[#0d1117] border border-[#30363d] p-3 rounded focus:border-blue-500 outline-none" value={apiKey} onChange={e => setApiKey(e.target.value)} />
+            <input type="password" className="w-full bg-[#0d1117] border border-[#30363d] p-3 rounded focus:border-blue-500 outline-none" value={apiKey} onChange={e => { setApiKey(e.target.value); localStorage.setItem('spa_apikey', e.target.value); }} />
           </div>
           <div ref={gameSearchRef} className="relative flex-1 w-full space-y-2">
             <label className="text-[10px] font-bold text-gray-500 uppercase">Game Name</label>
             <input type="text" className="w-full bg-[#0d1117] border border-[#30363d] p-3 rounded focus:border-blue-500 outline-none" value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setGameSuggestionsDismissed(false); }} />
+            {recentGames.length > 0 && searchTerm.length < 3 && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                <span className="text-[9px] font-bold uppercase text-gray-600">Recent:</span>
+                {recentGames.map(g => (
+                  <button key={g.i} onClick={() => { setSelectedApp(g); setSearchTerm(g.n.toUpperCase()); setGameSuggestionsDismissed(true); }}
+                    className="rounded border border-[#30363d] bg-[#21262d] px-2 py-0.5 text-[9px] font-bold uppercase text-gray-400 transition-colors hover:border-blue-500 hover:text-white">
+                    {g.n}
+                  </button>
+                ))}
+              </div>
+            )}
             {suggestions.length > 0 && !gameSuggestionsDismissed && (
               <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded border border-[#30363d] bg-[#1c2128] shadow-2xl">
                 {suggestions.map(s => <div key={s.i} onClick={() => { setSelectedApp(s); setSearchTerm(s.n.toUpperCase()); setGameSuggestionsDismissed(true); }} className="cursor-pointer border-b border-[#30363d] p-3 hover:bg-[#2d333b]">{s.n.toUpperCase()}</div>)}
@@ -378,8 +473,10 @@ function App() {
         {/* Status Bar */}
         {(analysis || loading) && (
           <div className="flex justify-between items-center mb-6 px-4 py-2 bg-[#1c2128] rounded border border-[#30363d] text-[10px] font-mono">
-            <div>STATUS: <span className={loading ? "text-orange-400" : "text-green-400"}>{debug.status}</span></div>
-            {/* CENTER SECTION: Patch Title */}
+            <div className="flex items-center gap-3">
+              <span>STATUS: <span className={loading ? "text-orange-400" : "text-green-400"}>{debug.status}</span></span>
+              {patchDate && !loading && <span className="text-gray-500">{patchDate}</span>}
+            </div>
             <div className="text-center truncate px-2">
               {currentPatchTitle ? (
                 <span className="text-white font-bold tracking-widest uppercase border-x border-[#30363d] px-4 py-1 animate-pulse">
@@ -389,7 +486,17 @@ function App() {
                 <span className="text-gray-600 italic">READY_FOR_SCAN</span>
               )}
             </div>
-            {analysis && <span className="text-blue-400">MODEL: {analysis.model}</span>}
+            <div className="flex items-center gap-3">
+              {analysis && <span className="text-blue-400">MODEL: {analysis.model}</span>}
+              <div className="flex items-center gap-1 border-l border-[#30363d] pl-3">
+                {[['sm','text-[9px]'],['base','text-[11px]'],['lg','text-[13px]']].map(([s, cls]) => (
+                  <button key={s} onClick={() => { setFontSize(s); localStorage.setItem('spa_fontsize', s); }}
+                    className={`${cls} font-bold px-1 leading-none transition-colors ${fontSize === s ? 'text-blue-400' : 'text-gray-500 hover:text-white'}`}>
+                    A
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -409,11 +516,37 @@ function App() {
           </div>
         )}*/}
         
+        {/* Section Search */}
+        {(analysis || loading) && (
+          <div className="mb-4 flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search across sections..."
+              value={sectionSearch}
+              onChange={e => setSectionSearch(e.target.value)}
+              className="w-64 rounded border border-[#30363d] bg-[#0d1117] px-3 py-1.5 text-sm text-[#adbac7] placeholder-gray-600 outline-none focus:border-blue-500"
+            />
+            {sectionSearch && <button onClick={() => setSectionSearch('')} className="text-xs text-gray-500 hover:text-white">✕ clear</button>}
+          </div>
+        )}
+
         {/* Main Analysis Grid */}
         <div className="relative">
-          <div className={`grid grid-cols-1 gap-6 transition-all md:grid-cols-4 ${expandedColumn ? 'opacity-30 blur-sm' : ''}`}>
+          <div className={`flex gap-6 transition-all ${expandedColumn ? 'opacity-30 blur-sm' : ''}`}>
             {ANALYSIS_COLUMNS.map(({ key, title, color }) => (
-              <Section key={key} title={title} color={color} content={analysis?.[key]} loading={loading} showExpandButton onExpand={() => setExpandedColumn(key)} />
+              <Section
+                key={key}
+                title={title}
+                color={color}
+                content={analysis?.[key]}
+                loading={loading}
+                showExpandButton={!collapsedColumns.has(key)}
+                onExpand={() => setExpandedColumn(key)}
+                isCollapsed={collapsedColumns.has(key)}
+                onToggleCollapse={() => setCollapsedColumns(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; })}
+                fontSize={fontSize}
+                searchTerm={sectionSearch}
+              />
             ))}
           </div>
 
@@ -499,14 +632,18 @@ function App() {
             </div>
             <div className="flex gap-3 overflow-x-auto p-4 custom-scrollbar">
               {patchImages.map((url, i) => (
-                <img
+                <div
                   key={i}
-                  src={url}
-                  alt={`Patch image ${i + 1}`}
                   onClick={() => setLightboxImage(url)}
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  className="h-28 w-auto flex-shrink-0 cursor-pointer rounded-lg border border-[#30363d] object-cover transition-all duration-200 hover:border-blue-500 hover:scale-105"
-                />
+                  className="relative h-28 w-44 flex-shrink-0 cursor-pointer overflow-hidden rounded-lg border border-[#30363d] transition-all duration-200 hover:border-blue-500 hover:scale-105"
+                >
+                  <img
+                    src={url}
+                    alt={`Patch image ${i + 1}`}
+                    onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
               ))}
             </div>
           </div>
