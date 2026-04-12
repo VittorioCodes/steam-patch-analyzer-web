@@ -25,7 +25,7 @@ For the Python version, see [Steam Patch Analyzer](https://github.com/VittorioCo
 
 ## 🕹️ Live Demo
 
-This project is hosted with Github Pages for live usage without any installation. [See here](https://vittoriocodes.github.io/Steam-Patch-Analyzer-Web).
+This project is hosted with Github Pages for live usage without any installation. [See here](https://vittoriocodes.github.io/steam-patch-analyzer-web).
 
 ## 🚀 Getting Started
 
