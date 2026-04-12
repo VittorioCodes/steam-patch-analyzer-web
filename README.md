@@ -6,6 +6,7 @@
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 **Steam Patch Analyzer** is a specialized AI-powered web utility designed for gamers. It distills complex, thousands-of-words-long patch notes into actionable intelligence in seconds. By leveraging the **Gemini**, it categorizes technical updates into Buffs, Nerfs, and Optimal Strategies to keep you ahead of the meta.
+
 For the Python version, see [Steam Patch Analyzer](https://github.com/VittorioCodes/Steam-Patch-Analyzer)
 
 ---
