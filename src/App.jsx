@@ -822,7 +822,7 @@ function App() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-sm font-bold text-[#adbac7] tracking-tight">PATCH_ANALYZER v0.8</span>
+              <span className="text-sm font-bold text-[#adbac7] tracking-tight">PATCH_ANALYZER v0.8.1</span>
             </div>
             <p className="text-xs leading-relaxed max-w-sm">
               Built with ❤️ for the gaming community. This tool provides automated meta-analysis using advanced LLMs to help competitive players stay ahead. I wanted to make this project for my own need but since I lowkey f with it, decided to share.
