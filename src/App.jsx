@@ -202,7 +202,7 @@ function App() {
 
   /** AI Models & Prompting */
   const MODELS = [
-    "models/gemini-3.1-flash-lite-preview",
+    "models/gemini-3.1-flash-lite",
     "models/gemini-3-flash-preview",
     "models/gemini-2.5-pro", 
     "models/gemini-2.5-flash", 
